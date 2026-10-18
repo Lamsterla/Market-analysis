@@ -1,5 +1,16 @@
 # Environment configuration
 .env
+databse/init_db.php
+database/schema.sql
+database/simulator.sqlite
+config/database.php
+config/database.php.bak 
+database/simulator.sqlite.bak
+
+database/schema.sql.bak
+
+database/init_db.php.bak
+
 
 # Python artifacts
 __pycache__/

@@ -53,10 +53,10 @@ function load_env(string $filePath = null): void {
                 $val = substr($val, 1, -1);
             }
 
-            if (!isset($_ENV[$key])) {
-                $_ENV[$key] = $val;
-                putenv("{$key}={$val}");
-            }
+            // Populate $_ENV, $_SERVER, and putenv for maximum compatibility
+            $_ENV[$key] = $val;
+            $_SERVER[$key] = $val;
+            putenv("{$key}={$val}");
         }
     }
 
@@ -67,16 +67,33 @@ function load_env(string $filePath = null): void {
 load_env();
 
 /**
+ * Robust environment variable accessor checking $_ENV, $_SERVER, and getenv()
+ */
+function get_env_var(string $key, $default = null) {
+    $val = getenv($key);
+    if ($val !== false && $val !== '') {
+        return $val;
+    }
+    if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+        return $_ENV[$key];
+    }
+    if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+        return $_SERVER[$key];
+    }
+    return $default;
+}
+
+/**
  * Get Database Configuration from environment or defaults
  */
 function get_db_config(): array {
     return [
-        'driver'   => getenv('DB_DRIVER') ?: 'pgsql',
-        'host'     => getenv('DB_HOST') ?: '127.0.0.1',
-        'port'     => (int)(getenv('DB_PORT') ?: 5432),
-        'dbname'   => getenv('DB_NAME') ?: 'stock',
-        'user'     => getenv('DB_USER') ?: 'postgres',
-        'password' => getenv('DB_PASSWORD') !== false ? (string)getenv('DB_PASSWORD') : '',
+        'driver'   => (string)get_env_var('DB_DRIVER', 'pgsql'),
+        'host'     => (string)get_env_var('DB_HOST', '127.0.0.1'),
+        'port'     => (int)get_env_var('DB_PORT', 5432),
+        'dbname'   => (string)get_env_var('DB_NAME', 'stock'),
+        'user'     => (string)get_env_var('DB_USER', 'postgres'),
+        'password' => (string)get_env_var('DB_PASSWORD', 'root'),
     ];
 }
 
