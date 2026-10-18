@@ -1,7 +1,7 @@
 # Environment configuration and secrets
 .env
 .env.*
-!.env.example
+.env.example
 
 # Database configuration
 config/database.php
