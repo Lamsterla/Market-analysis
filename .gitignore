@@ -1,17 +1,18 @@
-# Environment configuration
+# Environment configuration and secrets
 .env
-databse/init_db.php
-database/schema.sql
-database/simulator.sqlite
+.env.*
+!.env.example
+
+# Database configuration
 config/database.php
-config/database.php.bak 
-database/simulator.sqlite.bak
+config/database.php.bak
+config/database.php.bak.*
 
-database/schema.sql.bak
-
-database/init_db.php.bak
-.env.bak 
-
+# Database files
+database/*.sqlite
+database/*.sqlite3
+database/*.db
+database/*.bak
 
 # Python artifacts
 __pycache__/
