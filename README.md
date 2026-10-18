@@ -136,7 +136,6 @@ stock-market-automated-system/
 │   └── js/
 │       └── app.js            # Vanilla JavaScript client for search, calculations & polling
 ├── requirements.txt          # Python dependency list (yfinance)
-├── .env.example              # Environment variables template
 ├── .env                      # Local environment configuration
 ├── .gitignore                # Git exclusions
 └── README.md                 # Setup and operational documentation
