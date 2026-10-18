@@ -1,0 +1,2 @@
+# Minimal requirements for Yahoo Finance stock market data retrieval
+yfinance>=0.2.38

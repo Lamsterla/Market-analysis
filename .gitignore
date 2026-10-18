@@ -1,0 +1,13 @@
+# Environment configuration
+.env
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Logs and runtime locks
+*.log
+monitor_heartbeat.json

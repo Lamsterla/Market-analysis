@@ -1,0 +1,78 @@
+<?php
+/**
+ * Database Initialization Script
+ * Connects to PostgreSQL, creates the database if missing, and executes schema.sql
+ */
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../config/database.php';
+
+echo "========================================\n";
+echo " Stock Market Simulator - DB Setup\n";
+echo "========================================\n\n";
+
+$config = get_db_config();
+$dbName = $config['stock'];
+$host = $config['localhost'];
+$port = $config['5432'];
+$user = $config['user'];    
+$password = $config['root'];
+
+echo "Checking PostgreSQL connection to {$host}:{$port}...\n";
+
+// First connect to default 'postgres' database to ensure stock_simulator DB exists
+try {
+    $adminDsn = "pgsql:host={$host};port={$port};dbname=postgres";
+    $adminPdo = new PDO($adminDsn, $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_TIMEOUT => 5
+    ]);
+
+    // Check if target database exists
+    $stmt = $adminPdo->prepare("SELECT 1 FROM pg_database WHERE datname = :dbname");
+    $stmt->execute(['dbname' => $dbName]);
+    if (!$stmt->fetch()) {
+        echo "Database '{$dbName}' does not exist. Creating it now...\n";
+        $adminPdo->exec("CREATE DATABASE \"{$dbName}\"");
+        echo "Database '{$dbName}' created successfully.\n";
+    } else {
+        echo "Database '{$dbName}' already exists.\n";
+    }
+} catch (PDOException $e) {
+    echo "Notice: Could not connect to default 'postgres' maintenance database ({$e->getMessage()}).\n";
+    echo "Attempting direct connection to '{$dbName}'...\n";
+}
+
+// Now connect to the application database and apply schema
+try {
+    $pdo = get_db_connection();
+    echo "Connected successfully to '{$dbName}' on PostgreSQL!\n";
+
+    $schemaFile = __DIR__ . '/schema.sql';
+    if (!file_exists($schemaFile)) {
+        throw new RuntimeException("Schema file not found at: {$schemaFile}");
+    }
+
+    $sql = file_get_contents($schemaFile);
+    echo "Applying schema definitions from schema.sql...\n";
+    $pdo->exec($sql);
+
+    echo "\n[SUCCESS] PostgreSQL schema initialized successfully!\n";
+    echo "Accounts, positions, trades, and monitor_status tables are ready.\n";
+
+    // Show initial account balance
+    $stmt = $pdo->query("SELECT balance, currency FROM accounts WHERE id = 1");
+    $acc = $stmt->fetch();
+    if ($acc) {
+        echo "Initial Virtual Balance: " . $acc['currency'] . ' ' . number_format((float)$acc['balance'], 2) . "\n";
+    }
+
+} catch (Exception $e) {
+    echo "\n[ERROR] Failed to initialize database: " . $e->getMessage() . "\n\n";
+    echo "Tips:\n";
+    echo "1. Verify PostgreSQL service is running on {$host}:{$port}.\n";
+    echo "2. Check credentials in .env (DB_USER, DB_PASSWORD).\n";
+    echo "3. Ensure PHP extension 'pdo_pgsql' is active.\n";
+    exit(1);
+}
