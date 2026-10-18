@@ -10,6 +10,7 @@ database/simulator.sqlite.bak
 database/schema.sql.bak
 
 database/init_db.php.bak
+.env.bak 
 
 
 # Python artifacts
