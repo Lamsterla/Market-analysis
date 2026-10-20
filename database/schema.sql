@@ -75,3 +75,18 @@ ON CONFLICT (id) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades (symbol);
 CREATE INDEX IF NOT EXISTS idx_trades_created_at ON trades (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_positions_symbol ON positions (symbol);
+
+-- 6. Historical Portfolio Snapshots for Equity Curve Tracking
+CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+    id SERIAL PRIMARY KEY,
+    snapshot_date DATE NOT NULL UNIQUE,
+    available_cash NUMERIC(15, 2) NOT NULL,
+    portfolio_value NUMERIC(15, 2) NOT NULL,
+    total_equity NUMERIC(15, 2) NOT NULL,
+    total_invested NUMERIC(15, 2) NOT NULL,
+    unrealised_pnl NUMERIC(15, 2) NOT NULL,
+    realised_pnl NUMERIC(15, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_date ON portfolio_snapshots (snapshot_date ASC);
+

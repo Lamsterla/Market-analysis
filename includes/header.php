@@ -57,6 +57,9 @@ $dbCheck = check_db_status();
                 <a href="trade_history.php" class="nav-item <?= $currentPage === 'trade_history.php' ? 'active' : '' ?>">
                     Trade History
                 </a>
+                <a href="stock_analysis.php" class="nav-item <?= $currentPage === 'stock_analysis.php' ? 'active' : '' ?>">
+                    Stock Analysis
+                </a>
             </nav>
 
             <div class="header-right">
