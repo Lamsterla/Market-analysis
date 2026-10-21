@@ -286,3 +286,4 @@ C:\xampp\php\php.exe test_system.php
 9. ✅ **Missing or stale price handling** (stop-loss refused if price is invalid or stale).
 10. ✅ **Database connection failure handling** (clear diagnostic error reporting).
 11. ✅ **Application restart data persistence** (portfolio data retained across requests).
+v
