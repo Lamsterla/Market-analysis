@@ -1,0 +1,580 @@
+# System Flow & Architecture Specification
+**Project:** StockPulse - Stock Market Automated Paper Trading Simulator  
+**File:** `flow.readme`  
+**Version:** 2.0  
+**Stack:** PHP 8.0+, Vanilla JavaScript, CSS3, PostgreSQL (with SQLite Fallback), Python 3.12 (`yfinance`)
+
+---
+
+## 📑 Table of Contents
+1. [Executive Summary & Core Concept](#1-executive-summary--core-concept)
+2. [End-to-End Ecosystem Architecture](#2-end-to-end-ecosystem-architecture)
+3. [Complete User Journey & Lifecycle Flowchart](#3-complete-user-journey--lifecycle-flowchart)
+4. [Authentication & Session Flow (Login / Logout Lifecycle)](#4-authentication--session-flow-login--logout-lifecycle)
+   - [4.1 Registration & Account Provisioning](#41-registration--account-provisioning)
+   - [4.2 Login & Authentication Guard](#42-login--authentication-guard)
+   - [4.3 Session Validation & Route Protection](#43-session-validation--route-protection)
+   - [4.4 Logout & Session Teardown](#44-logout--session-teardown)
+5. [Core Trading & Simulation Flows](#5-core-trading--simulation-flows)
+   - [5.1 Dashboard Metric Aggregation Flow (`index.php`)](#51-dashboard-metric-aggregation-flow-indexphp)
+   - [5.2 Stock Search & Live Analysis Flow (`stock_analysis.php`)](#52-stock-search--live-analysis-flow-stock_analysisphp)
+   - [5.3 Virtual Buy Order Flow (`buy.php`)](#53-virtual-buy-order-flow-buyphp)
+   - [5.4 Portfolio & Manual Sell Flow (`portfolio.php` / `sell.php`)](#54-portfolio--manual-sell-flow-portfoliophp--sellphp)
+   - [5.5 Background Automated Stop-Loss Monitor (`monitor_stop_loss.py`)](#55-background-automated-stop-loss-monitor-monitor_stop_losspy)
+   - [5.6 Trade Ledger & Audit History Flow (`trade_history.php`)](#56-trade-ledger--audit-history-flow-trade_historyphp)
+   - [5.7 Simulation Reset Flow](#57-simulation-reset-flow)
+6. [Database Schema & Entity Relationship (ER) Flow](#6-database-schema--entity-relationship-er-flow)
+7. [Sequence Diagrams](#7-sequence-diagrams)
+   - [Sequence 1: User Login & Session Establishment](#sequence-1-user-login--session-establishment)
+   - [Sequence 2: Stock Analysis & Technical Indicator Computation](#sequence-2-stock-analysis--technical-indicator-computation)
+   - [Sequence 3: Virtual Buy Order with Stop-Loss Configuration](#sequence-3-virtual-buy-order-with-stop-loss-configuration)
+   - [Sequence 4: 24/7 Automated Stop-Loss Trigger & Execution](#sequence-4-247-automated-stop-loss-trigger--execution)
+   - [Sequence 5: Secure User Logout & Cleanup](#sequence-5-secure-user-logout--cleanup)
+8. [Failure Handling & Offline Resilience](#8-failure-handling--offline-resilience)
+
+---
+
+## 1. Executive Summary & Core Concept
+
+**StockPulse** is a full-featured, zero-risk financial paper-trading simulator designed to replicate real-world stock market trading. 
+
+* **Virtual Capital:** Every user begins with a virtual balance (default ₹100,000 / $10,000).
+* **Real-time Live Market Data:** Stock quotes, market prices, and historical records are streamed directly from Yahoo Finance via a specialized Python bridge (`yfinance`).
+* **Zero Financial Risk:** No real brokers or actual funds are involved. Orders are executed virtually against live market prices.
+* **Automated Safety Protection:** A continuous background daemon monitors open positions against user-defined stop-loss prices, automatically triggering simulated market-sell orders when downside risk thresholds are breached.
+
+---
+
+## 2. End-to-End Ecosystem Architecture
+
+The application is structured into four cooperative tiers:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                          1. Client Layer (Browser)                     │
+│  - Responsive UI (Vanilla JS, CSS3, Google Fonts)                      │
+│  - Interactive Price & Indicator Charts (Chart.js)                     │
+│  - Real-time Status Badges (Stop-Loss Heartbeat, P&L Color Codes)     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / HTTPS (GET / POST / AJAX)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                          2. Application Layer (PHP 8.0+)               │
+│  - Session Management & Route Authentication (`auth_check`)            │
+│  - Order Execution Engine (`execute_buy_stock`, `execute_sell_stock`)   │
+│  - Portfolio Math (Floating P&L, Realised P&L, Weighted Cost Basis)    │
+│  - JSON REST Endpoints (`/api/stock_price.php`, `/api/stock_analysis`) │
+└───────────────────┬──────────────────────────────────┬─────────────────┘
+                    │ PDO Transactions                 │ Subprocess IPC
+                    ▼                                  ▼
+┌───────────────────────────────────┐  ┌─────────────────────────────────┐
+│     3. Data Persistence Layer     │  │   4. Market Intelligence Layer  │
+│ - PostgreSQL (Primary Engine)     │  │ - Python 3.12 (`stock_data.py`) │
+│ - SQLite (Automatic Fallback)     │  │ - `yfinance` Market Fetcher     │
+│ - Tables: `users`, `accounts`,    │  │ - Background Monitor Daemon     │
+│   `positions`, `trades`,          │  │   (`monitor_stop_loss.py`)      │
+│   `price_cache`, `monitor_status` │  │ - Yahoo Finance Cloud API       │
+└───────────────────────────────────┘  └─────────────────────────────────┘
+```
+
+---
+
+## 3. Complete User Journey & Lifecycle Flowchart
+
+The following flowchart outlines the entire lifecycle of a user interacting with the platform from entry to exit:
+
+```mermaid
+flowchart TD
+    Start([User Opens Browser]) --> AuthCheck{Is Session Authenticated?}
+    
+    %% Authentication & Onboarding
+    AuthCheck -- No --> LoginPage[Display Login Page /login.php]
+    LoginPage --> HasAccount{Existing Account?}
+    HasAccount -- No --> RegisterPage[Register / Create Account]
+    RegisterPage --> HashPassword[Hash Password bcrypt/argon2]
+    HashPassword --> InitAccount[Provision ₹100,000 Virtual Balance]
+    InitAccount --> LoginPage
+    HasAccount -- Yes --> SubmitLogin[Submit Email & Password]
+    SubmitLogin --> VerifyCreds{Credentials Valid?}
+    VerifyCreds -- No --> LoginError[Show Error Flash Message] --> LoginPage
+    VerifyCreds -- Yes --> CreateSession[Generate Secure Session ID & Token]
+    CreateSession --> RedirectDash[Redirect to Dashboard index.php]
+    
+    %% Authenticated App Flow
+    AuthCheck -- Yes --> Dashboard[Dashboard index.php]
+    RedirectDash --> Dashboard
+    
+    Dashboard --> NavChoice{User Navigation Choice}
+    
+    %% Navigation Paths
+    NavChoice -->|1. Research Stocks| Analysis[Stock Analysis Page stock_analysis.php]
+    NavChoice -->|2. Place New Order| BuyPage[Buy Stocks Page buy.php]
+    NavChoice -->|3. View Open Holdings| PortfolioPage[Portfolio Page portfolio.php]
+    NavChoice -->|4. Audit Transactions| TradeHistory[Trade History trade_history.php]
+    NavChoice -->|5. Reset Simulator| ResetBalance[Reset Virtual Capital Action]
+    NavChoice -->|6. Terminate Session| LogoutAction[Logout Action /logout.php]
+    
+    %% Analysis Flow
+    Analysis --> InputTicker[Input Stock Symbol e.g., RELIANCE.NS, AAPL]
+    InputTicker --> PyAnalysis[Python computes RSI, MACD, SMA, Valuation]
+    PyAnalysis --> RenderCharts[Render Interactive Chart.js & Trade Verdict]
+    RenderCharts --> QuickBuy[Click 'Quick Buy' Button] --> BuyPage
+    
+    %% Buy Flow
+    BuyPage --> FetchLiveQuote[Fetch Live Yahoo Finance Price via API]
+    FetchLiveQuote --> ConfigureOrder[Enter Quantity + Optional Stop-Loss]
+    ConfigureOrder --> CashCheck{Available Cash >= Total Cost?}
+    CashCheck -- No --> RejectBuy[Display Insufficient Funds Notice]
+    CashCheck -- Yes --> DeductCash[Deduct Cash & Insert/Update Position]
+    DeductCash --> LogBuyTrade[Write BUY Entry to Trade Ledger]
+    LogBuyTrade --> PortfolioPage
+    
+    %% Portfolio & Sell Flow
+    PortfolioPage --> UpdateSL[Edit Stop-Loss Price / Percentage]
+    PortfolioPage --> SellAction[Click Sell Stock]
+    SellAction --> SellPage[Sell Stocks Page sell.php]
+    SellPage --> CheckQty{Quantity Held >= Sell Qty?}
+    CheckQty -- No --> RejectSell[Display Invalid Quantity Error]
+    CheckQty -- Yes --> CalcPnL[Calculate Realised Profit/Loss]
+    CalcPnL --> CreditCash[Credit Proceeds to Virtual Balance]
+    CreditCash --> LogSellTrade[Write SELL Entry to Trade Ledger]
+    LogSellTrade --> TradeHistory
+    
+    %% Background Stop-Loss Daemon
+    subgraph Background_Monitoring_Daemon [24/7 Automated Stop-Loss Engine]
+        DaemonRun[monitor_stop_loss.py Running] --> PollPositions[Fetch Open Positions with Stop-Loss]
+        PollPositions --> QueryYF[Query Live Yahoo Finance Prices]
+        QueryYF --> SLTriggered{Live Price <= Stop-Loss Price?}
+        SLTriggered -- Yes --> AutoSellAPI[Call api/execute_stop_loss.php]
+        AutoSellAPI --> Liquidate[Execute Market Sell & Credit Virtual Balance]
+        Liquidate --> LogSLTrade[Write STOP_LOSS_TRIGGERED to Ledger]
+        SLTriggered -- No --> SleepInterval[Sleep 30 Seconds] --> PollPositions
+    end
+    
+    %% Logout Flow
+    LogoutAction --> ClearSession[Destroy Session Data & Expire Cookie]
+    ClearSession --> RedirectLogin[Redirect to login.php with Flash Confirmation]
+    RedirectLogin --> End([User Logged Out Safely])
+```
+
+---
+
+## 4. Authentication & Session Flow (Login / Logout Lifecycle)
+
+Authentication ensures multi-user isolation, private portfolio balances, confidential trade records, and secure session management.
+
+### 4.1 Registration & Account Provisioning
+1. **User Input:** New trader submits username, email, and password.
+2. **Password Security:** Password is encrypted using `password_hash($password, PASSWORD_BCRYPT, ['cost' => 12])`.
+3. **Database Insertion:**
+   - Creates a record in the `users` table.
+   - Automatically initializes a linked virtual account in `accounts` table with `id = users.id`, `balance = 100000.00`, and `currency = 'INR'` (or user preference).
+4. **Onboarding Complete:** User is redirected to `login.php` with a success notification.
+
+### 4.2 Login & Authentication Guard
+1. **Credentials Submission:** User posts email/username and password over HTTPS.
+2. **Credential Verification:**
+   - Query user record by email.
+   - Check password using `password_verify($password, $user['password_hash'])`.
+3. **Session Hardening:**
+   - On successful verification, call `session_regenerate_id(true)` to defend against session fixation attacks.
+   - Store minimal, safe session state:
+     ```php
+     $_SESSION['user_id'] = (int)$user['id'];
+     $_SESSION['user_name'] = $user['username'];
+     $_SESSION['user_email'] = $user['email'];
+     $_SESSION['logged_in_at'] = time();
+     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+     ```
+4. **Routing:** Redirect to `index.php` (or original destination if stored in `$_GET['redirect']`).
+
+### 4.3 Session Validation & Route Protection
+Every protected page (`index.php`, `portfolio.php`, `buy.php`, `sell.php`, `trade_history.php`, `stock_analysis.php`) executes an authentication gatekeeper at the top of the script:
+
+```
+[Incoming HTTP Request] 
+         │
+         ▼
+[Check isset($_SESSION['user_id'])]
+   ├── FALSE ──> Redirect to `/login.php?redirect=` . urlencode($_SERVER['REQUEST_URI'])
+   └── TRUE  ──> Verify Session Inactivity Timeout (< 2 Hours)
+                  ├── Expired ──> Destroy Session & Redirect with 'Session timed out'
+                  └── Valid   ──> Update $_SESSION['last_activity'] = time() & Render Page
+```
+
+### 4.4 Logout & Session Teardown
+1. **Trigger:** User clicks the **"Logout"** button situated in the top navigation bar or user dropdown.
+2. **Backend Execution (`logout.php`):**
+   - Unset all values: `$_SESSION = [];`
+   - Delete the HTTP cookie:
+     ```php
+     if (ini_get("session.use_cookies")) {
+         $params = session_get_cookie_params();
+         setcookie(session_name(), '', time() - 42000,
+             $params["path"], $params["domain"],
+             $params["secure"], $params["httponly"]
+         );
+     }
+     ```
+   - Destroy session on server: `session_destroy();`
+3. **Redirection:** Redirect user to `login.php?status=logged_out` with an informational banner: *"You have been logged out safely."*
+
+---
+
+## 5. Core Trading & Simulation Flows
+
+### 5.1 Dashboard Metric Aggregation Flow (`index.php`)
+1. **Query Account Balances:** Retrieves current cash from `accounts`.
+2. **Retrieve Open Positions:** Queries all rows from `positions` for the logged-in user.
+3. **Live Market Price Synchronization:**
+   - Executes Python `stock_data.py --price-cache` to retrieve latest quotes.
+   - Calculates **Current Portfolio Market Value** = $\sum (\text{Quantity}_i \times \text{Current Price}_i)$.
+   - Calculates **Invested Cost Basis** = $\sum (\text{Quantity}_i \times \text{Average Buy Price}_i)$.
+   - Calculates **Total Unrealised Floating P&L** = $\text{Market Value} - \text{Cost Basis}$.
+   - Calculates **Overall Net P&L** = $(\text{Available Cash} + \text{Portfolio Value}) - \text{Initial Balance}$.
+4. **Heartbeat Check:** Reads `monitor_heartbeat.json` or queries `monitor_status` table to verify if the automated stop-loss monitor is running.
+
+---
+
+### 5.2 Stock Search & Live Analysis Flow (`stock_analysis.php`)
+1. **User Search:** User inputs any global stock ticker (`RELIANCE.NS`, `TCS.NS`, `INFY.NS`, `AAPL`, `MSFT`, `TSLA`).
+2. **Bridge Execution:** PHP invokes `python python/stock_data.py --analysis <SYMBOL>`.
+3. **Data Generation & Modeling:**
+   - 1-Year historical OHLCV pricing fetched from Yahoo Finance.
+   - Computes Moving Averages: SMA (20, 50, 200), EMA (12, 26).
+   - Computes Momentum & Volatility: RSI (14-day), MACD (12, 26, 9), Bollinger Bands, ATR.
+   - Evaluates Fundamentals: P/E Ratio, P/B Ratio, EPS, Dividend Yield, Market Capitalization, 52-Week Range.
+   - Calculates Composite Quantitative Score: `STRONG BUY`, `BUY`, `HOLD`, `SELL`, or `STRONG SELL`.
+4. **Interactive Visualization:** Renders interactive Line/Candlestick charts via Chart.js with responsive timeframe selectors (1M, 3M, 6M, 1Y, 5Y).
+5. **Direct Action:** Provides a direct `[Buy <SYMBOL>]` link that automatically pre-populates `buy.php?symbol=<SYMBOL>`.
+
+---
+
+### 5.3 Virtual Buy Order Flow (`buy.php`)
+1. **Symbol & Quantity Selection:** User inputs symbol and share count.
+2. **Live Price Discovery:**
+   - Frontend calls `api/stock_price.php?symbol=<SYMBOL>`.
+   - Returns company name, currency symbol, current price, and 24h delta.
+3. **Stop-Loss Configuration:**
+   - User can input an explicit stop-loss price (e.g. ₹1,150.00) OR a percentage threshold (e.g. 5.0% below purchase price).
+4. **Pre-Trade Validation:**
+   - Asserts $\text{Quantity} \ge 1$.
+   - Computes $\text{Total Order Cost} = \text{Quantity} \times \text{Live Price}$.
+   - Validates that $\text{Available Virtual Cash} \ge \text{Total Order Cost}$.
+5. **Atomic Database Execution (ACID Transaction):**
+   ```sql
+   BEGIN TRANSACTION;
+   -- 1. Deduct cash
+   UPDATE accounts SET balance = balance - :total_cost WHERE id = :user_id;
+   -- 2. Upsert position (recalculate weighted average price if already held)
+   INSERT INTO positions (symbol, company_name, quantity, average_buy_price, stop_loss_price, stop_loss_percent, currency)
+   VALUES (:sym, :name, :qty, :price, :sl_price, :sl_pct, :curr)
+   ON CONFLICT (symbol) DO UPDATE SET
+       quantity = positions.quantity + EXCLUDED.quantity,
+       average_buy_price = ((positions.quantity * positions.average_buy_price) + (EXCLUDED.quantity * EXCLUDED.average_buy_price)) / (positions.quantity + EXCLUDED.quantity),
+       stop_loss_price = COALESCE(EXCLUDED.stop_loss_price, positions.stop_loss_price),
+       stop_loss_percent = COALESCE(EXCLUDED.stop_loss_percent, positions.stop_loss_percent),
+       updated_at = CURRENT_TIMESTAMP;
+   -- 3. Log trade ledger
+   INSERT INTO trades (symbol, company_name, trade_type, quantity, price, total_amount, realised_pnl, reason, currency)
+   VALUES (:sym, :name, 'BUY', :qty, :price, :total_cost, 0.00, 'MANUAL_BUY', :curr);
+   COMMIT;
+   ```
+
+---
+
+### 5.4 Portfolio & Manual Sell Flow (`portfolio.php` / `sell.php`)
+1. **Holdings Review:** Displays all open stocks, current price, purchase price, unrealised P&L, and stop-loss targets.
+2. **Stop-Loss Editing:** Users can update their stop-loss threshold at any time from the portfolio table.
+3. **Manual Sell Initiation:** User selects **"Sell"** on a holding.
+4. **Order Execution:**
+   - Validates user holds sufficient shares: $\text{Requested Quantity} \le \text{Open Quantity}$.
+   - Fetches live market execution price from Yahoo Finance.
+   - Computes:
+     $$\text{Gross Sale Proceeds} = \text{Quantity} \times \text{Current Price}$$
+     $$\text{Cost Basis} = \text{Quantity} \times \text{Average Buy Price}$$
+     $$\text{Realised P&L} = \text{Gross Sale Proceeds} - \text{Cost Basis}$$
+5. **Database Transaction:**
+   - Credits $\text{Gross Sale Proceeds}$ back to `accounts.balance`.
+   - Decrements `positions.quantity`. If $\text{Quantity Remaining} = 0$, deletes row from `positions`.
+   - Records transaction in `trades` table with `trade_type = 'SELL'`, `realised_pnl`, and `reason = 'MANUAL_SELL'`.
+
+---
+
+### 5.5 Background Automated Stop-Loss Monitor (`monitor_stop_loss.py`)
+1. **Daemon Startup:** The monitor runs continuously via CLI:
+   ```bash
+   python python/monitor_stop_loss.py --interval 30
+   ```
+2. **Heartbeat Publishing:** Every loop iteration writes a timestamped status update into `monitor_heartbeat.json` and `monitor_status` database table.
+3. **Position Inspection:** Scans active positions having `stop_loss_price IS NOT NULL`.
+4. **Market Verification:**
+   - Queries Yahoo Finance for real-time market prices of active tickers.
+   - Compares:
+     $$\text{Is } \text{Market Price} \le \text{Configured Stop-Loss Price} ?$$
+5. **Trigger Execution:**
+   - If threshold is breached, the daemon calls `api/execute_stop_loss.php` (or CLI execution).
+   - Executes simulated market order liquidation.
+   - Returns proceeds to virtual cash balance.
+   - Tags the audit ledger with `reason = 'STOP_LOSS_TRIGGERED'`.
+   - Dispatches console alert and updates UI alert status.
+
+---
+
+### 5.6 Trade Ledger & Audit History Flow (`trade_history.php`)
+1. **Immutable Audit Ledger:** Every executed BUY, SELL, or STOP_LOSS event is recorded permanently in `trades`.
+2. **Filtering Options:** Filter by `ALL`, `BUY`, `SELL`, or `STOP_LOSS`.
+3. **Cumulative Metrics:**
+   - Total Trades Executed.
+   - Total Volume Capital Deployed.
+   - Total Gross Proceeds Returned.
+   - Lifetime Realised P&L (Total Net Profit/Loss locked in).
+
+---
+
+### 5.7 Simulation Reset Flow
+1. **Purpose:** Allows the user to reset their paper-trading portfolio to the pristine initial state.
+2. **Execution:**
+   - Truncates / clears `positions` table.
+   - Truncates / clears `trades` table.
+   - Resets `accounts.balance` to initial capital (₹100,000.00).
+   - Clears `price_cache`.
+3. **Confirmation:** Requires explicit user confirmation via modal dialog before resetting data.
+
+---
+
+## 6. Database Schema & Entity Relationship (ER) Flow
+
+```mermaid
+erDiagram
+    USERS ||--|| ACCOUNTS : "provisions"
+    USERS ||--o{ POSITIONS : "owns"
+    USERS ||--o{ TRADES : "executes"
+    
+    USERS {
+        int id PK
+        string username
+        string email
+        string password_hash
+        timestamp created_at
+    }
+
+    ACCOUNTS {
+        int id PK
+        numeric balance "Virtual cash (default 100000.00)"
+        numeric initial_balance "Starting capital benchmark"
+        string currency "INR or USD"
+        timestamp updated_at
+    }
+
+    POSITIONS {
+        int id PK
+        string symbol UK "e.g. RELIANCE.NS, AAPL"
+        string company_name
+        int quantity "Shares currently held"
+        numeric average_buy_price "Weighted average cost"
+        numeric stop_loss_price "Trigger price"
+        numeric stop_loss_percent "% below buy price"
+        string currency
+        timestamp updated_at
+    }
+
+    TRADES {
+        int id PK
+        string symbol
+        string company_name
+        string trade_type "BUY or SELL"
+        int quantity
+        numeric price "Execution price"
+        numeric total_amount "Total cash value"
+        numeric realised_pnl "Profit/Loss locked in"
+        string reason "MANUAL, STOP_LOSS_TRIGGERED"
+        timestamp created_at
+    }
+
+    PRICE_CACHE {
+        string symbol PK
+        string company_name
+        numeric price
+        string currency
+        timestamp last_updated
+    }
+
+    MONITOR_STATUS {
+        int id PK
+        boolean is_running
+        timestamp last_heartbeat
+        text message
+    }
+```
+
+---
+
+## 7. Sequence Diagrams
+
+### Sequence 1: User Login & Session Establishment
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Trader (Browser)
+    participant UI as Login Page (login.php)
+    participant Auth as Auth Controller
+    participant DB as PostgreSQL / SQLite
+    participant Session as PHP Session Store
+
+    User->>UI: Enter Email & Password
+    UI->>Auth: POST /login.php (credentials, csrf_token)
+    Auth->>Auth: Verify CSRF token
+    Auth->>DB: SELECT * FROM users WHERE email = :email
+    DB-->>Auth: Return user record (hash, id, username)
+    Auth->>Auth: password_verify(password, hash)
+    
+    alt Invalid Password / User Not Found
+        Auth-->>UI: Redirect with error: "Invalid credentials"
+        UI-->>User: Show red alert banner
+    else Valid Credentials
+        Auth->>Session: session_regenerate_id(true)
+        Auth->>Session: Store user_id, username, permissions
+        Auth->>DB: UPDATE users SET last_login = NOW() WHERE id = :id
+        Auth-->>UI: 302 Redirect to index.php
+        UI-->>User: Render Dashboard with user greeting
+    end
+```
+
+---
+
+### Sequence 2: Stock Analysis & Technical Indicator Computation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Trader (Browser)
+    participant Page as stock_analysis.php
+    participant API as api/stock_analysis.php
+    participant Py as python/stock_data.py
+    participant YF as Yahoo Finance Cloud
+
+    User->>Page: Type Symbol (e.g. RELIANCE.NS) & Submit
+    Page->>API: AJAX GET /api/stock_analysis.php?symbol=RELIANCE.NS
+    API->>Py: exec(python stock_data.py --analysis RELIANCE.NS)
+    Py->>YF: yfinance.Ticker('RELIANCE.NS').history(period='1y')
+    YF-->>Py: Return 1-Year Daily OHLCV Bars
+    Py->>Py: Compute RSI(14), MACD(12,26,9), SMA(20,50,200), EMA
+    Py->>Py: Compute Support/Resistance, Valuation & Sentiment
+    Py-->>API: Emit Structured JSON
+    API-->>Page: Return JSON payload
+    Page->>Page: Chart.js renders price & indicator charts
+    Page-->>User: Display Technical Gauges & Quantitative Verdict
+```
+
+---
+
+### Sequence 3: Virtual Buy Order with Stop-Loss Configuration
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Trader (Browser)
+    participant Buy as buy.php
+    participant DB as PostgreSQL / SQLite
+    participant Py as python/stock_data.py
+    participant YF as Yahoo Finance Cloud
+
+    User->>Buy: Input Symbol 'TCS.NS' & Qty 5
+    Buy->>Py: Fetch live market price
+    Py->>YF: yf.Ticker('TCS.NS').fast_info['last_price']
+    YF-->>Py: Live Price = ₹3,500.00
+    Py-->>Buy: Quote = ₹3,500.00
+    User->>Buy: Set Stop-Loss = 5% (₹3,325.00) & Click Submit
+    
+    Buy->>DB: BEGIN TRANSACTION
+    Buy->>DB: SELECT balance FROM accounts WHERE id = 1 FOR UPDATE
+    DB-->>Buy: Balance = ₹100,000.00
+    Note over Buy: Total Cost = 5 * ₹3,500 = ₹17,500.00<br/>Balance >= Total Cost? YES
+    
+    Buy->>DB: UPDATE accounts SET balance = balance - 17500.00
+    Buy->>DB: UPSERT INTO positions (symbol, qty=5, avg_price=3500.00, sl=3325.00)
+    Buy->>DB: INSERT INTO trades (type='BUY', qty=5, price=3500.00, total=17500.00)
+    Buy->>DB: COMMIT TRANSACTION
+    
+    Buy-->>User: Display Success Notice: "Bought 5 shares of TCS.NS"
+```
+
+---
+
+### Sequence 4: 24/7 Automated Stop-Loss Trigger & Execution
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Daemon as monitor_stop_loss.py
+    participant YF as Yahoo Finance Cloud
+    participant API as api/execute_stop_loss.php
+    participant DB as PostgreSQL / SQLite
+    participant Client as User Browser Dashboard
+
+    loop Every 30 Seconds
+        Daemon->>DB: SELECT * FROM positions WHERE stop_loss_price IS NOT NULL
+        DB-->>Daemon: Open position: TCS.NS (Qty: 5, SL: ₹3,325.00)
+        Daemon->>YF: Fetch real-time price for TCS.NS
+        YF-->>Daemon: Real-time price dropped to ₹3,310.00!
+        
+        Note over Daemon: Trigger Condition Met: ₹3,310.00 <= ₹3,325.00
+        
+        Daemon->>API: POST /api/execute_stop_loss.php (TCS.NS, trigger_price=3310.00)
+        API->>DB: BEGIN TRANSACTION
+        API->>DB: UPDATE accounts SET balance = balance + (5 * 3310.00)
+        API->>DB: DELETE FROM positions WHERE symbol = 'TCS.NS'
+        API->>DB: INSERT INTO trades (type='SELL', qty=5, price=3310.00, reason='STOP_LOSS_TRIGGERED')
+        API->>DB: COMMIT TRANSACTION
+        API-->>Daemon: HTTP 200 OK (Executed)
+        
+        Daemon->>Daemon: Update monitor_heartbeat.json (Last Triggered: TCS.NS)
+    end
+    
+    Client->>API: Periodic status poll / page refresh
+    API-->>Client: Returns updated cash balance & trade notification
+    Client-->>Client: Show Badge: "Stop-Loss Executed for TCS.NS at ₹3,310.00"
+```
+
+---
+
+### Sequence 5: Secure User Logout & Cleanup
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Trader (Browser)
+    participant Header as Shared Navigation (header.php)
+    participant Logout as Logout Handler (logout.php)
+    participant Session as Server Session Manager
+    participant Login as Login Page (login.php)
+
+    User->>Header: Click "Logout" Link
+    Header->>Logout: GET /logout.php
+    Logout->>Logout: Verify Active Session Exists
+    Logout->>Session: $_SESSION = [] (Clear memory array)
+    Logout->>Logout: setcookie(session_name(), '', time() - 3600, path, domain, secure, httponly)
+    Logout->>Session: session_destroy() (Purge server-side session file)
+    Logout-->>Login: 302 Redirect to /login.php?status=logged_out
+    Login-->>User: Display Login Form with banner: "You have successfully logged out."
+```
+
+---
+
+## 8. Failure Handling & Offline Resilience
+
+| Failure Scenario | Automatic System Reaction |
+|---|---|
+| **PostgreSQL Service Offline** | Seamlessly activates local SQLite storage fallback (`database/simulator.sqlite`). Displays warning banner in UI without crashing user trades. |
+| **Yahoo Finance Network Timeout** | Falls back to cached pricing in `price_cache` table. Shows *"Price cached from [timestamp]"* badge in UI. |
+| **Stop-Loss Daemon Terminated** | System header displays `🔴 Monitor Inactive` pill. Prevents false assumption of active protection. |
+| **Insufficient Virtual Funds** | Atomically rejects order before database commitment. No negative balances permitted (`CHECK (balance >= 0)`). |
+| **Invalid Ticker Symbol** | Python validation detects unknown symbol from Yahoo Finance and gracefully returns descriptive error without throwing unhandled exceptions. |
+| **Session Invalidation / Expiry** | Expired sessions are intercepted by the `auth_check` middleware and redirected to `login.php` with state preservation. |
+
+---
+
+*Document compiled automatically for the StockPulse Automated System.*  
+*Maintained under version control.*
