@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stockful &bull; Professional Trading Terminal &amp; Paper Simulator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js for technical chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="app-body">
+
+    Top Simulation Caution Banner
+    <div class="simulation-banner">
+        <div class="banner-content">
+            <span class="banner-badge">SIMULATION ONLY</span>
+            <span>Stockful Paper Trading Simulator &bull; Virtual Currency &bull; Zero Capital Risk &bull; Real-time
+                Market Modeling</span>
+        </div>
+    </div>
+
+    <!-- App Main Layout Container -->
+    <div class="app-layout">
+
+        <!-- Left Navigation Sidebar -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-header">
+                <a href="#overview" class="sidebar-brand">
+                    <span class="brand-symbol">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                    </span>
+                    <div class="brand-text-group">
+                        <span class="brand-title">Stock<strong>ful</strong></span>
+                        <span class="brand-badge">Paper Trade UI</span>
+                    </div>
+                </a>
+                <button type="button" class="sidebar-close-btn" onclick="toggleSidebar()">&times;</button>
+            </div>
+
+            <!-- Left Navigation Menu -->
+            <nav class="sidebar-menu">
+                <div class="menu-heading">Main Navigation</div>
+
+                <a href="#overview" class="menu-link active" onclick="switchTab('overview', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="9"></rect>
+                            <rect x="14" y="3" width="7" height="5"></rect>
+                            <rect x="14" y="12" width="7" height="9"></rect>
+                            <rect x="3" y="16" width="7" height="5"></rect>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Market Overview</span>
+                </a>
+
+                <a href="#watchlist" class="menu-link" onclick="switchTab('watchlist', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Watchlist</span>
+                    <span class="menu-badge-pill">6 Live</span>
+                </a>
+
+                <a href="#portfolio" class="menu-link" onclick="switchTab('portfolio', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Portfolio</span>
+                </a>
+
+                <a href="#trade" class="menu-link" onclick="switchTab('trade', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Order Desk</span>
+                    <span class="menu-badge-pro">Trade</span>
+                </a>
+
+                <a href="#analysis" class="menu-link" onclick="switchTab('analysis', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Technical Analysis</span>
+                </a>
+
+                <a href="#settings" class="menu-link" onclick="switchTab('settings', this)">
+                    <span class="menu-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg>
+                    </span>
+                    <span class="menu-text">Settings</span>
+                </a>
+            </nav>
+
+            <!-- Sidebar Virtual Balance Widget -->
+            <div class="sidebar-wallet-card">
+                <div class="wallet-header">
+                    <span class="wallet-label">Available Cash</span>
+                    <span class="wallet-tag">Simulated</span>
+                </div>
+                <div class="wallet-amount font-mono">₹1,24,580.00</div>
+                <div class="wallet-footer">
+                    <span class="wallet-subtext">Total Value: ₹1,58,940.50</span>
+                </div>
+                <div class="wallet-actions">
+                    <button class="btn btn-sm btn-primary" onclick="openOrderModal('RELIANCE.NS', 1211.20)">+ Quick
+                        Buy</button>
+                </div>
+            </div>
+
+            <!-- Sidebar User Profile -->
+            <div class="sidebar-footer">
+                <div class="user-profile-badge">
+                    <div class="user-avatar">SF</div>
+                    <div class="user-info">
+                        <span class="user-name">Professional Trader</span>
+                        <span class="user-status">Paper Mode &bull; Active</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Sidebar Mobile Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Right Main Viewport Area -->
+        <div class="app-main-viewport">
+
+            <!-- Top Command Bar -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button type="button" class="mobile-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </button>
+                    <div class="topbar-crumb-info">
+                        <span class="topbar-site-badge">COLOR PALETTE: #9FA0FF &bull; #D5E8E6 &bull; #FFF3E3 &bull;
+                            #FF7171</span>
+                        <span class="topbar-context-page" id="currentPageTitle">Market Overview Dashboard</span>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <div class="status-pill status-active" title="Automatic 24/7 Stop-Loss System is Active">
+                        <span class="pulse-dot"></span>
+                        <span>Auto Stop-Loss Active</span>
+                        <span class="info-icon">ℹ️</span>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm"
+                        onclick="alert('Simulation cash reset to ₹1,00,000.00')">Reset Account</button>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+
+                <!-- TAB 1: OVERVIEW -->
+                <div id="tab-overview" class="tab-pane active">
+
+                    <!-- Top Page Title & Action -->
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Executive Trading Overview</h1>
+                            <p class="page-subtitle">Unified simulated portfolio metrics, real-time Yahoo Finance market
+                                feeds, and active automated stop-loss thresholds.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="switchTab('trade')">+ Buy Stocks</button>
+                            <button class="btn btn-secondary" onclick="switchTab('portfolio')">View Holdings
+                                (4)</button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Financial Metrics Cards Grid -->
+                    <section class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-label">Virtual Cash Balance</span>
+                                <span class="metric-icon">💵</span>
+                            </div>
+                            <div class="metric-value">₹1,24,580.00</div>
+                            <div class="metric-sub">
+                                <span>Initial: ₹1,00,000.00</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-label">Open Portfolio Value</span>
+                                <span class="metric-icon">💼</span>
+                            </div>
+                            <div class="metric-value">₹34,360.50</div>
+                            <div class="metric-sub">
+                                <span>4 Active Holdings</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-label">Unrealised P&amp;L</span>
+                                <span class="metric-icon">📈</span>
+                            </div>
+                            <div class="metric-value positive">+₹3,412.50</div>
+                            <div class="metric-sub positive">
+                                <span>▲ +11.02% Floating Gain</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-header">
+                                <span class="metric-label">Realised Profit / Loss</span>
+                                <span class="metric-icon">🎯</span>
+                            </div>
+                            <div class="metric-value positive">+₹21,168.00</div>
+                            <div class="metric-sub positive">
+                                <span>14 Closed Trades</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Interactive Live Stock Search Widget -->
+                    <section class="search-widget">
+                        <h2
+                            style="font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">
+                            Search Live Market Quotes</h2>
+                        <div class="search-form-row">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon-inside">🔍</span>
+                                <input type="text" id="liveSearchInput" class="search-input"
+                                    placeholder="Enter stock symbol (e.g. RELIANCE.NS, TCS.NS, INFY.NS, AAPL, NVDA)..."
+                                    value="RELIANCE.NS">
+                            </div>
+                            <button class="btn btn-primary" onclick="searchStockMock()">Search Quote</button>
+                        </div>
+                        <div class="quick-symbols">
+                            <span class="quick-symbols-label">Quick Watch:</span>
+                            <span class="symbol-chip" onclick="quickFill('RELIANCE.NS')">RELIANCE.NS</span>
+                            <span class="symbol-chip" onclick="quickFill('TCS.NS')">TCS.NS</span>
+                            <span class="symbol-chip" onclick="quickFill('INFY.NS')">INFY.NS</span>
+                            <span class="symbol-chip" onclick="quickFill('HDFCBANK.NS')">HDFCBANK.NS</span>
+                            <span class="symbol-chip" onclick="quickFill('AAPL')">AAPL</span>
+                            <span class="symbol-chip" onclick="quickFill('TSLA')">TSLA</span>
+                        </div>
+
+                        <!-- Live Quote Card Preview -->
+                        <div class="quote-card" id="quoteCardPreview">
+                            <div class="quote-left">
+                                <div class="quote-symbol">
+                                    <span id="qSymbol">RELIANCE.NS</span>
+                                    <span class="badge badge-buy">YAHOO FINANCE LIVE</span>
+                                </div>
+                                <div class="quote-name" id="qName">Reliance Industries Limited &bull; NSE</div>
+                            </div>
+                            <div class="quote-right">
+                                <div class="quote-price-group">
+                                    <div class="quote-price" id="qPrice">₹1,211.20</div>
+                                    <div class="quote-change positive" id="qChange">+₹14.80 (+1.24%)</div>
+                                    <div class="quote-time">Real-time Yahoo Finance Data</div>
+                                </div>
+                                <button class="btn btn-primary" onclick="openOrderModal('RELIANCE.NS', 1211.20)">Buy
+                                    Shares</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Portfolio Holdings Table Panel -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <span>📊 Current Portfolio Positions</span>
+                                <span class="badge badge-buy">4 Active</span>
+                            </h2>
+                            <a href="#portfolio" class="btn btn-sm btn-secondary" onclick="switchTab('portfolio')">Full
+                                Portfolio &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Company</th>
+                                        <th>Shares</th>
+                                        <th>Avg Buy Price</th>
+                                        <th>Current Price</th>
+                                        <th>Market Value</th>
+                                        <th>Unrealised P&amp;L</th>
+                                        <th>Stop-Loss</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-mono"><strong>RELIANCE.NS</strong></td>
+                                        <td>Reliance Industries</td>
+                                        <td class="font-mono">10</td>
+                                        <td class="font-mono">₹1,180.00</td>
+                                        <td class="font-mono">₹1,211.20</td>
+                                        <td class="font-mono">₹12,112.00</td>
+                                        <td class="font-mono positive">+₹312.00 (+2.64%)</td>
+                                        <td><span class="badge badge-stoploss">₹1,121.00 (5%)</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger"
+                                                onclick="alert('Sell order placed for RELIANCE.NS')">Sell</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>TCS.NS</strong></td>
+                                        <td>Tata Consultancy Services</td>
+                                        <td class="font-mono">4</td>
+                                        <td class="font-mono">₹3,450.00</td>
+                                        <td class="font-mono">₹3,560.00</td>
+                                        <td class="font-mono">₹14,240.00</td>
+                                        <td class="font-mono positive">+₹440.00 (+3.19%)</td>
+                                        <td><span class="badge badge-stoploss">₹3,277.50 (5%)</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger"
+                                                onclick="alert('Sell order placed for TCS.NS')">Sell</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>INFY.NS</strong></td>
+                                        <td>Infosys Limited</td>
+                                        <td class="font-mono">8</td>
+                                        <td class="font-mono">₹1,890.00</td>
+                                        <td class="font-mono">₹1,845.00</td>
+                                        <td class="font-mono">₹14,760.00</td>
+                                        <td class="font-mono negative">-₹360.00 (-2.38%)</td>
+                                        <td><span class="badge badge-stoploss">₹1,795.50 (5%)</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger"
+                                                onclick="alert('Sell order placed for INFY.NS')">Sell</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>AAPL</strong></td>
+                                        <td>Apple Inc.</td>
+                                        <td class="font-mono">2</td>
+                                        <td class="font-mono">$220.00</td>
+                                        <td class="font-mono">$235.50</td>
+                                        <td class="font-mono">$471.00</td>
+                                        <td class="font-mono positive">+$31.00 (+7.05%)</td>
+                                        <td><span class="badge badge-manual">None</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger"
+                                                onclick="alert('Sell order placed for AAPL')">Sell</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- TAB 2: WATCHLIST -->
+                <div id="tab-watchlist" class="tab-pane">
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Market Watchlist</h1>
+                            <p class="page-subtitle">Track your favourite equities in real time with high-precision
+                                volume and trend monitoring.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openOrderModal('NVDA', 142.50)">+ Add Ticker</button>
+                    </div>
+
+                    <div class="panel">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Market</th>
+                                        <th>Price</th>
+                                        <th>Day Change</th>
+                                        <th>52W Range</th>
+                                        <th>Volume</th>
+                                        <th>Quick Trade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-mono"><strong>RELIANCE.NS</strong></td>
+                                        <td>NSE India</td>
+                                        <td class="font-mono">₹1,211.20</td>
+                                        <td class="positive font-mono">+1.24%</td>
+                                        <td>₹1,090 - ₹1,420</td>
+                                        <td>4.8M</td>
+                                        <td><button class="btn btn-sm btn-primary"
+                                                onclick="openOrderModal('RELIANCE.NS', 1211.20)">Buy</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>TCS.NS</strong></td>
+                                        <td>NSE India</td>
+                                        <td class="font-mono">₹3,560.00</td>
+                                        <td class="positive font-mono">+0.85%</td>
+                                        <td>₹3,150 - ₹4,200</td>
+                                        <td>1.2M</td>
+                                        <td><button class="btn btn-sm btn-primary"
+                                                onclick="openOrderModal('TCS.NS', 3560.00)">Buy</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>HDFCBANK.NS</strong></td>
+                                        <td>NSE India</td>
+                                        <td class="font-mono">₹1,680.50</td>
+                                        <td class="negative font-mono">-0.42%</td>
+                                        <td>₹1,380 - ₹1,794</td>
+                                        <td>6.1M</td>
+                                        <td><button class="btn btn-sm btn-primary"
+                                                onclick="openOrderModal('HDFCBANK.NS', 1680.50)">Buy</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono"><strong>NVDA</strong></td>
+                                        <td>NASDAQ</td>
+                                        <td class="font-mono">$142.50</td>
+                                        <td class="positive font-mono">+3.82%</td>
+                                        <td>$45.50 - $144.00</td>
+                                        <td>42.5M</td>
+                                        <td><button class="btn btn-sm btn-primary"
+                                                onclick="openOrderModal('NVDA', 142.50)">Buy</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PORTFOLIO -->
+                <div id="tab-portfolio" class="tab-pane">
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Virtual Stock Portfolio</h1>
+                            <p class="page-subtitle">Detailed breakdown of open positions, cost basis, unrealised
+                                returns, and safety stop-loss controls.</p>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th>Units</th>
+                                        <th>Avg Cost</th>
+                                        <th>LTP (Last Traded Price)</th>
+                                        <th>Investment</th>
+                                        <th>Current Val</th>
+                                        <th>Net Return</th>
+                                        <th>Stop Loss Price</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-mono"><strong>RELIANCE.NS</strong></td>
+                                        <td class="font-mono">10</td>
+                                        <td class="font-mono">₹1,180.00</td>
+                                        <td class="font-mono">₹1,211.20</td>
+                                        <td class="font-mono">₹11,800.00</td>
+                                        <td class="font-mono">₹12,112.00</td>
+                                        <td class="font-mono positive">+₹312.00 (+2.64%)</td>
+                                        <td><span class="badge badge-stoploss">₹1,121.00</span></td>
+                                        <td><button class="btn btn-sm btn-danger" onclick="alert('Sell submitted')">Sell
+                                                Units</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: ORDER DESK -->
+                <div id="tab-trade" class="tab-pane">
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Order Desk &amp; Execution</h1>
+                            <p class="page-subtitle">Simulate real market purchase orders with automatic balance checks
+                                and stop-loss safeguard configuration.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+                        <div class="panel">
+                            <h3 style="margin-bottom: 16px; font-weight: 700;">Place Virtual Order</h3>
+                            <div class="form-group">
+                                <label class="form-label">Ticker Symbol</label>
+                                <input type="text" id="orderSymbol" class="form-control" value="RELIANCE.NS"
+                                    oninput="calculateOrder()">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Quantity (Shares)</label>
+                                    <input type="number" id="orderQty" class="form-control" value="5" min="1"
+                                        oninput="calculateOrder()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Execution Price (₹)</label>
+                                    <input type="number" id="orderPrice" class="form-control" value="1211.20"
+                                        step="0.05" oninput="calculateOrder()">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Stop-Loss Safeguard</label>
+                                <select class="form-control" id="orderStopLoss" onchange="calculateOrder()">
+                                    <option value="5">5% Downside Protection</option>
+                                    <option value="10">10% Downside Protection</option>
+                                    <option value="none">No Stop-Loss</option>
+                                </select>
+                            </div>
+
+                            <div class="trade-calculation-box">
+                                <div class="calc-row">
+                                    <span>Calculated Subtotal:</span>
+                                    <span id="calcSubtotal" class="font-mono font-bold">₹6,056.00</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Simulated Brokerage &amp; Fees:</span>
+                                    <span class="font-mono text-muted">₹0.00 (Zero Fee)</span>
+                                </div>
+                                <div class="calc-row">
+                                    <span>Trigger Stop-Loss At:</span>
+                                    <span id="calcStopPrice" class="font-mono text-danger"
+                                        style="color: var(--color-accent-dark);">₹1,150.64</span>
+                                </div>
+                                <div class="calc-row total-row">
+                                    <span>Total Required Cash:</span>
+                                    <span id="calcTotal" class="font-mono">₹6,056.00</span>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" style="width: 100%;" onclick="executeMockOrder()">Confirm
+                                Virtual Purchase</button>
+                        </div>
+
+                        <div class="panel"
+                            style="background: linear-gradient(135deg, var(--color-secondary) 0%, #FFFFFF 100%);">
+                            <h3 style="margin-bottom: 16px; font-weight: 700; color: var(--color-secondary-dark);">
+                                Simulation Safety Guarantee</h3>
+                            <ul
+                                style="margin-left: 20px; line-height: 1.8; color: var(--text-secondary); font-size: 0.92rem;">
+                                <li><strong>100% Virtual Money:</strong> You can never lose real funds.</li>
+                                <li><strong>Live Real Market Pricing:</strong> Connected via Python Yahoo Finance API.
+                                </li>
+                                <li><strong>Background Guard Robot:</strong> Continuous stop-loss execution every 30
+                                    seconds.</li>
+                                <li><strong>Instant Reset:</strong> Restore full ₹1,00,000.00 balance anytime with one
+                                    click.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: TECHNICAL ANALYSIS -->
+                <div id="tab-analysis" class="tab-pane">
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Technical Analysis &amp; Indicators</h1>
+                            <p class="page-subtitle">30-day interactive price history, moving averages, and technical
+                                outlook.</p>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="font-weight: 700;">RELIANCE.NS &bull; 30-Day Trend Chart</h3>
+                            <span class="badge badge-buy">BULLISH OUTLOOK</span>
+                        </div>
+                        <div style="height: 340px; position: relative;">
+                            <canvas id="techChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 6: SETTINGS -->
+                <div id="tab-settings" class="tab-pane">
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Platform Settings</h1>
+                            <p class="page-subtitle">Configure theme preferences, stop-loss polling rate, and mock
+                                fallbacks.</p>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="form-group">
+                            <label class="form-label">Color Palette Theme</label>
+                            <input type="text" class="form-control"
+                                value="Stockful Custom (#9FA0FF, #D5E8E6, #FFF3E3, #FF7171)" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Stop-Loss Background Polling Interval</label>
+                            <input type="text" class="form-control" value="30 seconds" readonly>
+                        </div>
+                        <button class="btn btn-outline-danger" onclick="alert('Account data reset to default!')">Reset
+                            All Simulator State</button>
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- Main App Footer -->
+            <footer class="main-footer">
+                <div class="footer-container">
+                    <div class="footer-left">
+                        <p><strong>Stockful System</strong> &bull; Paper-Trading Simulator &bull; Left Menu Edition</p>
+                        <small class="text-muted">Color Palette: #9FA0FF (Periwinkle), #D5E8E6 (Mint), #FFF3E3 (Cream),
+                            #FF7171 (Coral)</small>
+                    </div>
+                    <div class="footer-right">
+                        <span class="system-time">System Ready &bull; Live Market Connected</span>
+                    </div>
+                </div>
+            </footer>
+
+        </div> <!-- .app-main-viewport -->
+    </div> <!-- .app-layout -->
+
+    <!-- Quick Buy Modal Dialog -->
+    <div id="orderModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modalStockTitle">Buy Shares</h3>
+                <button type="button" class="btn-close" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Symbol</label>
+                    <input type="text" id="modalSymbol" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" id="modalQty" class="form-control" value="10" min="1"
+                        oninput="updateModalCalc()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Market Price</label>
+                    <input type="number" id="modalPrice" class="form-control" readonly>
+                </div>
+                <div class="trade-calculation-box">
+                    <div class="calc-row total-row">
+                        <span>Total Cash Required:</span>
+                        <span id="modalTotal" class="font-mono">₹12,112.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeOrderModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmModalBuy()">Execute Purchase</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Scripts -->
+    <script>
+        function toggleSidebar() {
+            var sb = document.getElementById('appSidebar');
+            var ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('active');
+        }
+
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.menu-link').forEach(l => l.classList.remove('active'));
+
+            var target = document.getElementById('tab-' + tabId);
+            if (target) target.classList.add('active');
+
+            if (el) el.classList.add('active');
+
+            var titleEl = document.getElementById('currentPageTitle');
+            if (titleEl) {
+                var map = {
+                    'overview': 'Market Overview Dashboard',
+                    'watchlist': 'Equities Watchlist',
+                    'portfolio': 'Portfolio Holdings & Safety Controls',
+                    'trade': 'Order Desk & Execution',
+                    'analysis': 'Technical Trend & Analytics',
+                    'settings': 'System Settings'
+                };
+                titleEl.textContent = map[tabId] || 'Dashboard';
+            }
+
+            if (tabId === 'analysis') {
+                renderChart();
+            }
+
+            // Close mobile sidebar if open
+            var sb = document.getElementById('appSidebar');
+            if (sb && sb.classList.contains('open')) {
+                toggleSidebar();
+            }
+        }
+
+        function quickFill(sym) {
+            document.getElementById('liveSearchInput').value = sym;
+            searchStockMock();
+        }
+
+        function searchStockMock() {
+            var sym = document.getElementById('liveSearchInput').value.trim().toUpperCase();
+            var price = (sym === 'AAPL' || sym === 'NVDA') ? 225.50 : 1211.20;
+            var curr = (sym === 'AAPL' || sym === 'NVDA') ? '$' : '₹';
+
+            document.getElementById('qSymbol').textContent = sym;
+            document.getElementById('qName').textContent = sym + ' &bull; Active Market Equity';
+            document.getElementById('qPrice').textContent = curr + price.toFixed(2);
+            document.getElementById('quoteCardPreview').style.display = 'flex';
+        }
+
+        function calculateOrder() {
+            var qty = parseInt(document.getElementById('orderQty').value) || 0;
+            var price = parseFloat(document.getElementById('orderPrice').value) || 0;
+            var total = qty * price;
+            var stopPct = parseFloat(document.getElementById('orderStopLoss').value) || 0;
+
+            document.getElementById('calcSubtotal').textContent = '₹' + total.toFixed(2);
+            document.getElementById('calcTotal').textContent = '₹' + total.toFixed(2);
+
+            if (stopPct > 0) {
+                var stopPrice = price * (1 - stopPct / 100);
+                document.getElementById('calcStopPrice').textContent = '₹' + stopPrice.toFixed(2);
+            } else {
+                document.getElementById('calcStopPrice').textContent = 'Disabled';
+            }
+        }
+
+        function executeMockOrder() {
+            var sym = document.getElementById('orderSymbol').value;
+            var qty = document.getElementById('orderQty').value;
+            alert('Virtual buy order executed successfully!\nPurchased ' + qty + ' shares of ' + sym);
+            switchTab('overview');
+        }
+
+        function openOrderModal(sym, price) {
+            document.getElementById('modalStockTitle').textContent = 'Buy ' + sym;
+            document.getElementById('modalSymbol').value = sym;
+            document.getElementById('modalPrice').value = price;
+            document.getElementById('modalQty').value = 10;
+            updateModalCalc();
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
+
+        function updateModalCalc() {
+            var qty = parseInt(document.getElementById('modalQty').value) || 0;
+            var price = parseFloat(document.getElementById('modalPrice').value) || 0;
+            var total = qty * price;
+            document.getElementById('modalTotal').textContent = '₹' + total.toFixed(2);
+        }
+
+        function confirmModalBuy() {
+            var sym = document.getElementById('modalSymbol').value;
+            var qty = document.getElementById('modalQty').value;
+            alert('Order executed! Purchased ' + qty + ' shares of ' + sym);
+            closeOrderModal();
+        }
+
+        var chartInstance = null;
+        function renderChart() {
+            if (chartInstance) return;
+            var ctx = document.getElementById('techChart');
+            if (!ctx) return;
+
+            var labels = [];
+            var prices = [];
+            var base = 1150;
+            for (var i = 30; i >= 1; i--) {
+                labels.push('Day ' + (31 - i));
+                base += (Math.random() * 20 - 8);
+                prices.push(parseFloat(base.toFixed(2)));
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price (₹)',
+                        data: prices,
+                        borderColor: '#9FA0FF',
+                        backgroundColor: 'rgba(159, 160, 255, 0.15)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#FF7171'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(0,0,0,0.04)' } },
+                        y: { grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

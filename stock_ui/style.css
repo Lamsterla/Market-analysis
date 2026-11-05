@@ -1,0 +1,28 @@
+/* ==========================================================================
+   Stockful Standalone Showcase UI Stylesheet
+   Directly matching assets/css/style.css design tokens
+   ========================================================================== */
+
+@import url('../assets/css/style.css');
+
+/* Tab Management for Standalone Interactive Single-Page App */
+.tab-pane {
+    display: none;
+    animation: fadeInTab 0.25s ease-in-out;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+

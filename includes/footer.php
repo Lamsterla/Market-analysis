@@ -1,4 +1,20 @@
-    </main>
+            </main>
+
+            <!-- Main App Footer -->
+            <footer class="main-footer">
+                <div class="footer-container">
+                    <div class="footer-left">
+                        <p><strong>Stock Market Automated System</strong> &bull; Paper-Trading Simulator</p>
+                        <small class="text-muted">Market data provided by Yahoo Finance through Python <code>yfinance</code>. Strictly for educational &amp; simulation purposes.</small>
+                    </div>
+                    <div class="footer-right">
+                        <span class="system-time">System Time: <?= date('Y-m-d H:i:s T') ?></span>
+                    </div>
+                </div>
+            </footer>
+
+        </div> <!-- End .app-main-viewport -->
+    </div> <!-- End .app-layout -->
 
     <!-- Monitor Instructions Modal -->
     <div id="monitorModal" class="modal-backdrop" style="display: none;">
@@ -38,18 +54,15 @@
         </div>
     </div>
 
-    <!-- Main Footer -->
-    <footer class="main-footer">
-        <div class="footer-container">
-            <div class="footer-left">
-                <p><strong>Stock Market Automated System</strong> &bull; Paper-Trading Simulator</p>
-                <small class="text-muted">Market data provided by Yahoo Finance through Python <code>yfinance</code>. Strictly for educational &amp; simulation purposes.</small>
-            </div>
-            <div class="footer-right">
-                <span class="system-time">System Time: <?= date('Y-m-d H:i:s T') ?></span>
-            </div>
-        </div>
-    </footer>
+    <!-- Mobile Sidebar Helper -->
+    <script>
+        function toggleMobileSidebar() {
+            var sidebar = document.getElementById('appSidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            if (sidebar) sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('active');
+        }
+    </script>
 
     <!-- Vanilla JavaScript -->
     <script src="assets/js/app.js"></script>
