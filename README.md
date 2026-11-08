@@ -169,18 +169,7 @@ python -m pip install -r requirements.txt
 & "C:\Users\Arun Sah\AppData\Local\Programs\Python\Python312\python.exe" -m pip install -r requirements.txt
 ```
 
-### Step 4: Configure Database Settings
-Check your `.env` file and adjust PostgreSQL credentials if needed:
-```ini
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_NAME=stock_market
-DB_USER=postgres
-DB_PASSWORD=your_postgres_password
-INITIAL_BALANCE=100000.00
-CURRENCY_SYMBOL=₹
-CURRENCY_CODE=INR
-PYTHON_PATH=C:\Users\Arun Sah\AppData\Local\Programs\Python\Python312\python.exe
+
 ```
 
 ### Step 5: Initialize PostgreSQL Database
