@@ -168,13 +168,6 @@ body, body.app-body {
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.02);
 }
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-    z-index: 99;
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.02);
-}
 
 .sidebar-header {
     padding: 20px 20px 18px 20px;

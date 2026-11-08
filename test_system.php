@@ -24,6 +24,7 @@ $pdo->exec("DROP TABLE IF EXISTS monitor_status");
 $pdo->exec("
 CREATE TABLE accounts (
     id INTEGER PRIMARY KEY,
+    user_id INTEGER DEFAULT 1,
     balance NUMERIC(15, 2) NOT NULL DEFAULT 100000.00,
     initial_balance NUMERIC(15, 2) NOT NULL DEFAULT 100000.00,
     currency VARCHAR(10) NOT NULL DEFAULT 'INR',
@@ -33,6 +34,7 @@ CREATE TABLE accounts (
 
 CREATE TABLE positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER DEFAULT 1,
     symbol VARCHAR(30) NOT NULL UNIQUE,
     company_name VARCHAR(255),
     quantity INTEGER NOT NULL,
@@ -46,6 +48,7 @@ CREATE TABLE positions (
 
 CREATE TABLE trades (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER DEFAULT 1,
     symbol VARCHAR(30) NOT NULL,
     company_name VARCHAR(255),
     trade_type VARCHAR(10) NOT NULL,

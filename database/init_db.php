@@ -107,7 +107,7 @@ try {
     }
     echo "[OK] Connected successfully to '{$dbName}' via PostgreSQL PDO.\n";
 
-    // Step 4: Execute schema.sql
+    // Step 4: Execute schema.sql and auth_schema.sql
     $schemaFile = __DIR__ . '/schema.sql';
     if (!file_exists($schemaFile)) {
         throw new RuntimeException("Schema file not found at: {$schemaFile}");
@@ -120,11 +120,21 @@ try {
     }
 
     $pdo->exec($sql);
-    echo "[OK] Schema executed successfully.\n";
+    echo "[OK] Core schema executed successfully.\n";
+
+    $authSchemaFile = __DIR__ . '/auth_schema.sql';
+    if (file_exists($authSchemaFile)) {
+        echo "Applying authentication and multi-user schema definitions from auth_schema.sql...\n";
+        $authSql = file_get_contents($authSchemaFile);
+        if ($authSql !== false) {
+            $pdo->exec($authSql);
+            echo "[OK] Auth and multi-user schema executed successfully.\n";
+        }
+    }
 
     // Step 5: Verify that required tables exist
     echo "\nStep 5: Verifying required tables in database '{$dbName}'...\n";
-    $requiredTables = ['accounts', 'positions', 'trades', 'price_cache', 'monitor_status'];
+    $requiredTables = ['accounts', 'positions', 'trades', 'price_cache', 'monitor_status', 'users', 'login_attempts'];
     $placeholders = implode(',', array_fill(0, count($requiredTables), '?'));
 
     $verifyStmt = $pdo->prepare("

@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/auth.php';
 
 /**
  * Format monetary amounts with symbol
@@ -226,18 +227,29 @@ function get_cached_stock_price(string $symbol): ?array {
 /**
  * Get Virtual Account Balance Details
  */
-function get_account_balance(): array {
+function get_account_balance(?int $userId = null): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
     $pdo = get_db_connection();
-    $stmt = $pdo->query("SELECT * FROM accounts WHERE id = 1");
+    $stmt = $pdo->prepare("SELECT * FROM accounts WHERE user_id = :uid LIMIT 1");
+    $stmt->execute(['uid' => $userId]);
     $acc = $stmt->fetch();
+
+    if (!$acc && $userId === 1) {
+        $stmtFallback = $pdo->query("SELECT * FROM accounts WHERE id = 1 LIMIT 1");
+        $acc = $stmtFallback->fetch();
+    }
 
     if (!$acc) {
         $initBalance = (float)(getenv('INITIAL_BALANCE') ?: 100000.00);
         $curr = getenv('CURRENCY_CODE') ?: 'INR';
-        $ins = $pdo->prepare("INSERT INTO accounts (id, balance, initial_balance, currency) VALUES (1, :b, :ib, :c)");
-        $ins->execute(['b' => $initBalance, 'ib' => $initBalance, 'c' => $curr]);
+        $ins = $pdo->prepare("INSERT INTO accounts (user_id, balance, initial_balance, currency, created_at, updated_at) VALUES (:uid, :b, :ib, :c, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+        $ins->execute(['uid' => $userId, 'b' => $initBalance, 'ib' => $initBalance, 'c' => $curr]);
         return [
-            'id'              => 1,
+            'id'              => (int)$pdo->lastInsertId(),
+            'user_id'         => $userId,
             'balance'         => $initBalance,
             'initial_balance' => $initBalance,
             'currency'        => $curr
@@ -246,6 +258,7 @@ function get_account_balance(): array {
 
     return [
         'id'              => (int)$acc['id'],
+        'user_id'         => (int)($acc['user_id'] ?? $userId),
         'balance'         => (float)$acc['balance'],
         'initial_balance' => (float)$acc['initial_balance'],
         'currency'        => (string)$acc['currency']
@@ -255,9 +268,14 @@ function get_account_balance(): array {
 /**
  * Get Open Stock Positions with live prices and unrealised P&L
  */
-function get_open_positions(): array {
+function get_open_positions(?int $userId = null): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
     $pdo = get_db_connection();
-    $stmt = $pdo->query("SELECT * FROM positions ORDER BY symbol ASC");
+    $stmt = $pdo->prepare("SELECT * FROM positions WHERE user_id = :uid ORDER BY symbol ASC");
+    $stmt->execute(['uid' => $userId]);
     $positions = $stmt->fetchAll();
 
     if (empty($positions)) {
@@ -316,9 +334,13 @@ function get_open_positions(): array {
 /**
  * Get Comprehensive Portfolio Summary Metrics
  */
-function get_portfolio_summary(): array {
-    $account = get_account_balance();
-    $positions = get_open_positions();
+function get_portfolio_summary(?int $userId = null): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
+    $account = get_account_balance($userId);
+    $positions = get_open_positions($userId);
 
     $availableCash = $account['balance'];
     $initialBalance = $account['initial_balance'];
@@ -334,9 +356,10 @@ function get_portfolio_summary(): array {
         $totalUnrealisedPnl += $pos['unrealised_pnl'];
     }
 
-    // Get total realised P&L from trades
+    // Get total realised P&L from trades for this user
     $pdo = get_db_connection();
-    $stmt = $pdo->query("SELECT COALESCE(SUM(realised_pnl), 0) AS total_realised FROM trades WHERE trade_type = 'SELL'");
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(realised_pnl), 0) AS total_realised FROM trades WHERE user_id = :uid AND trade_type = 'SELL'");
+    $stmt->execute(['uid' => $userId]);
     $realisedRow = $stmt->fetch();
     $totalRealisedPnl = (float)($realisedRow['total_realised'] ?? 0.0);
 
@@ -368,8 +391,13 @@ function execute_buy_stock(
     int $quantity,
     ?float $customStopLossPrice = null,
     ?float $customStopLossPercent = null,
-    bool $forceMock = false
+    bool $forceMock = false,
+    ?int $userId = null
 ): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
     $symbol = trim(strtoupper($symbol));
     if ($symbol === '') {
         return ['success' => false, 'error' => 'Please enter a valid stock symbol.'];
@@ -421,13 +449,19 @@ function execute_buy_stock(
     try {
         $lockClause = get_for_update_clause();
 
-        // Lock account record for update
-        $stmt = $pdo->prepare("SELECT balance FROM accounts WHERE id = 1{$lockClause}");
-        $stmt->execute();
+        // Lock user account record for update
+        $stmt = $pdo->prepare("SELECT id, balance FROM accounts WHERE user_id = :uid{$lockClause}");
+        $stmt->execute(['uid' => $userId]);
         $account = $stmt->fetch();
 
+        if (!$account && $userId === 1) {
+            $stmt = $pdo->prepare("SELECT id, balance FROM accounts WHERE id = 1{$lockClause}");
+            $stmt->execute();
+            $account = $stmt->fetch();
+        }
+
         if (!$account) {
-            throw new RuntimeException("Virtual account not found.");
+            throw new RuntimeException("Virtual account not found for user.");
         }
 
         $currentBalance = (float)$account['balance'];
@@ -445,12 +479,12 @@ function execute_buy_stock(
 
         // Deduct cost
         $newBalance = round($currentBalance - $totalCost, 2);
-        $updAcc = $pdo->prepare("UPDATE accounts SET balance = :balance, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
-        $updAcc->execute(['balance' => $newBalance]);
+        $updAcc = $pdo->prepare("UPDATE accounts SET balance = :balance, updated_at = CURRENT_TIMESTAMP WHERE id = :aid");
+        $updAcc->execute(['balance' => $newBalance, 'aid' => $account['id']]);
 
-        // Check existing position
-        $posStmt = $pdo->prepare("SELECT * FROM positions WHERE symbol = :symbol{$lockClause}");
-        $posStmt->execute(['symbol' => $symbol]);
+        // Check existing position for this user
+        $posStmt = $pdo->prepare("SELECT * FROM positions WHERE user_id = :uid AND symbol = :symbol{$lockClause}");
+        $posStmt->execute(['uid' => $userId, 'symbol' => $symbol]);
         $existingPos = $posStmt->fetch();
 
         if ($existingPos) {
@@ -470,20 +504,21 @@ function execute_buy_stock(
                     stop_loss_percent = :sl_pct,
                     company_name = :cname,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE symbol = :symbol");
+                WHERE id = :id");
             $updPos->execute([
                 'qty'       => $newQty,
                 'avg_price' => $newAvgPrice,
                 'sl_price'  => $finalSlPrice,
                 'sl_pct'    => $finalSlPct,
                 'cname'     => $companyName,
-                'symbol'    => $symbol
+                'id'        => $existingPos['id']
             ]);
         } else {
             $insPos = $pdo->prepare("INSERT INTO positions
-                (symbol, company_name, quantity, average_buy_price, stop_loss_price, stop_loss_percent, currency, created_at, updated_at)
-                VALUES (:symbol, :cname, :qty, :avg_price, :sl_price, :sl_pct, :currency, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                (user_id, symbol, company_name, quantity, average_buy_price, stop_loss_price, stop_loss_percent, currency, created_at, updated_at)
+                VALUES (:uid, :symbol, :cname, :qty, :avg_price, :sl_price, :sl_pct, :currency, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
             $insPos->execute([
+                'uid'       => $userId,
                 'symbol'    => $symbol,
                 'cname'     => $companyName,
                 'qty'       => $quantity,
@@ -496,9 +531,10 @@ function execute_buy_stock(
 
         // Record in trades table
         $insTrade = $pdo->prepare("INSERT INTO trades
-            (symbol, company_name, trade_type, quantity, price, total_amount, realised_pnl, reason, notes, currency, created_at)
-            VALUES (:symbol, :cname, 'BUY', :qty, :price, :total, 0.00, 'MANUAL_BUY', :notes, :currency, CURRENT_TIMESTAMP)");
+            (user_id, symbol, company_name, trade_type, quantity, price, total_amount, realised_pnl, reason, notes, currency, created_at)
+            VALUES (:uid, :symbol, :cname, 'BUY', :qty, :price, :total, 0.00, 'MANUAL_BUY', :notes, :currency, CURRENT_TIMESTAMP)");
         $insTrade->execute([
+            'uid'      => $userId,
             'symbol'   => $symbol,
             'cname'    => $companyName,
             'qty'      => $quantity,
@@ -541,8 +577,13 @@ function execute_sell_stock(
     int $quantity,
     string $reason = 'MANUAL_SELL',
     ?float $overridePrice = null,
-    bool $forceMock = false
+    bool $forceMock = false,
+    ?int $userId = null
 ): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
     $symbol = trim(strtoupper($symbol));
     if ($symbol === '') {
         return ['success' => false, 'error' => 'Please enter a valid stock symbol.'];
@@ -579,9 +620,9 @@ function execute_sell_stock(
     try {
         $lockClause = get_for_update_clause();
 
-        // Lock position record for update
-        $stmt = $pdo->prepare("SELECT * FROM positions WHERE symbol = :symbol{$lockClause}");
-        $stmt->execute(['symbol' => $symbol]);
+        // Lock position record for update for this user
+        $stmt = $pdo->prepare("SELECT * FROM positions WHERE user_id = :uid AND symbol = :symbol{$lockClause}");
+        $stmt->execute(['uid' => $userId, 'symbol' => $symbol]);
         $position = $stmt->fetch();
 
         if (!$position) {
@@ -611,13 +652,20 @@ function execute_sell_stock(
         $realisedPnl = round($saleProceeds - $costBasis, 2);
 
         // Update virtual cash balance
-        $accStmt = $pdo->prepare("SELECT balance FROM accounts WHERE id = 1{$lockClause}");
-        $accStmt->execute();
+        $accStmt = $pdo->prepare("SELECT id, balance FROM accounts WHERE user_id = :uid{$lockClause}");
+        $accStmt->execute(['uid' => $userId]);
         $account = $accStmt->fetch();
+
+        if (!$account && $userId === 1) {
+            $accStmt = $pdo->prepare("SELECT id, balance FROM accounts WHERE id = 1{$lockClause}");
+            $accStmt->execute();
+            $account = $accStmt->fetch();
+        }
+
         $newBalance = round((float)$account['balance'] + $saleProceeds, 2);
 
-        $updAcc = $pdo->prepare("UPDATE accounts SET balance = :balance, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
-        $updAcc->execute(['balance' => $newBalance]);
+        $updAcc = $pdo->prepare("UPDATE accounts SET balance = :balance, updated_at = CURRENT_TIMESTAMP WHERE id = :aid");
+        $updAcc->execute(['balance' => $newBalance, 'aid' => $account['id']]);
 
         // Update or delete position
         if ($quantity === $heldQty) {
@@ -631,9 +679,10 @@ function execute_sell_stock(
 
         // Record in trades table
         $insTrade = $pdo->prepare("INSERT INTO trades
-            (symbol, company_name, trade_type, quantity, price, total_amount, realised_pnl, reason, notes, currency, created_at)
-            VALUES (:symbol, :cname, 'SELL', :qty, :price, :total, :pnl, :reason, :notes, :currency, CURRENT_TIMESTAMP)");
+            (user_id, symbol, company_name, trade_type, quantity, price, total_amount, realised_pnl, reason, notes, currency, created_at)
+            VALUES (:uid, :symbol, :cname, 'SELL', :qty, :price, :total, :pnl, :reason, :notes, :currency, CURRENT_TIMESTAMP)");
         $insTrade->execute([
+            'uid'      => $userId,
             'symbol'   => $symbol,
             'cname'    => $companyName,
             'qty'      => $quantity,
@@ -807,9 +856,13 @@ function evaluate_stop_losses(array $customQuotes = [], bool $forceMock = false)
 /**
  * Get Recent Trades History
  */
-function get_recent_trades(int $limit = 50): array {
+function get_recent_trades(int $limit = 50, ?int $userId = null): array {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
     $pdo = get_db_connection();
-    $stmt = $pdo->prepare("SELECT * FROM trades ORDER BY created_at DESC LIMIT :limit");
+    $stmt = $pdo->prepare("SELECT * FROM trades WHERE user_id = :uid ORDER BY created_at DESC LIMIT :limit");
+    $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     return $stmt->fetchAll();
@@ -842,11 +895,10 @@ function update_monitor_heartbeat(bool $isRunning, string $message = '', ?array 
                 message = :msg,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = 1");
-        $stmt->execute([
-            'running' => $isRunning ? 1 : 0,
-            'symbols' => $symbolsStr,
-            'msg'     => $message
-        ]);
+        $stmt->bindValue(':running', $isRunning ? true : false, PDO::PARAM_BOOL);
+        $stmt->bindValue(':symbols', $symbolsStr, $symbolsStr === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->bindValue(':msg', $message, $message === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->execute();
     } catch (Throwable $e) {
         // Silently tolerate if DB is temporarily unreachable
     }
@@ -909,7 +961,11 @@ function get_monitor_status(): array {
 /**
  * Reset Simulation to Clean Initial State
  */
-function reset_simulation(): bool {
+function reset_simulation(?int $userId = null): bool {
+    if ($userId === null) {
+        $userId = function_exists('get_current_user_id') ? get_current_user_id() : 1;
+    }
+
     $pdo = get_db_connection();
     $pdo->beginTransaction();
 
@@ -917,12 +973,18 @@ function reset_simulation(): bool {
         $initialBalance = (float)(getenv('INITIAL_BALANCE') ?: 100000.00);
         $currency = getenv('CURRENCY_CODE') ?: 'INR';
 
-        $pdo->exec("DELETE FROM trades");
-        $pdo->exec("DELETE FROM positions");
-        $pdo->exec("DELETE FROM price_cache");
+        $delTrades = $pdo->prepare("DELETE FROM trades WHERE user_id = :uid");
+        $delTrades->execute(['uid' => $userId]);
 
-        $upd = $pdo->prepare("UPDATE accounts SET balance = :b, initial_balance = :ib, currency = :c, updated_at = CURRENT_TIMESTAMP WHERE id = 1");
-        $upd->execute(['b' => $initialBalance, 'ib' => $initialBalance, 'c' => $currency]);
+        $delPos = $pdo->prepare("DELETE FROM positions WHERE user_id = :uid");
+        $delPos->execute(['uid' => $userId]);
+
+        if ($userId === 1) {
+            $pdo->exec("DELETE FROM price_cache");
+        }
+
+        $upd = $pdo->prepare("UPDATE accounts SET balance = :b, initial_balance = :ib, currency = :c, updated_at = CURRENT_TIMESTAMP WHERE user_id = :uid OR (id = 1 AND :uid = 1)");
+        $upd->execute(['b' => $initialBalance, 'ib' => $initialBalance, 'c' => $currency, 'uid' => $userId]);
 
         $pdo->commit();
         return true;
@@ -990,29 +1052,53 @@ function ensure_portfolio_snapshots_table(?PDO $pdo = null): void {
 /**
  * Record or update today's portfolio snapshot
  */
-function record_daily_portfolio_snapshot(): void {
+function record_daily_portfolio_snapshot(?int $userId = null): void {
     try {
         $pdo = get_db_connection();
         ensure_portfolio_snapshots_table($pdo);
 
-        $summary = get_portfolio_summary();
+        if ($userId === null) {
+            $userId = get_current_user_id();
+        }
+
+        $summary = get_portfolio_summary($userId);
         $today = date('Y-m-d');
 
         $driver = strtolower(get_db_config()['driver'] ?? 'pgsql');
         $isFallback = !empty($GLOBALS['DB_FALLBACK_ACTIVE']);
         $activeDriver = $isFallback ? 'sqlite' : $driver;
 
-        if ($activeDriver === 'sqlite') {
+        // Check if user_id column exists
+        $hasUserId = false;
+        try {
+            $cols = $pdo->query("PRAGMA table_info(portfolio_snapshots)")->fetchAll(PDO::FETCH_COLUMN, 1);
+            $hasUserId = in_array('user_id', $cols, true);
+        } catch (Throwable $e) {
+            $hasUserId = true; // PostgreSQL
+        }
+
+        if ($hasUserId) {
             $sql = "INSERT INTO portfolio_snapshots
-                    (snapshot_date, available_cash, portfolio_value, total_equity, total_invested, unrealised_pnl, realised_pnl, created_at)
-                    VALUES (:sdate, :cash, :pval, :equity, :invested, :unrealised, :realised, CURRENT_TIMESTAMP)
-                    ON CONFLICT(snapshot_date) DO UPDATE SET
+                    (user_id, snapshot_date, available_cash, portfolio_value, total_equity, total_invested, unrealised_pnl, realised_pnl, created_at)
+                    VALUES (:uid, :sdate, :cash, :pval, :equity, :invested, :unrealised, :realised, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, snapshot_date) DO UPDATE SET
                         available_cash = EXCLUDED.available_cash,
                         portfolio_value = EXCLUDED.portfolio_value,
                         total_equity = EXCLUDED.total_equity,
                         total_invested = EXCLUDED.total_invested,
                         unrealised_pnl = EXCLUDED.unrealised_pnl,
                         realised_pnl = EXCLUDED.realised_pnl";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                'uid'        => $userId,
+                'sdate'      => $today,
+                'cash'       => $summary['available_cash'],
+                'pval'       => $summary['portfolio_value'],
+                'equity'     => $summary['total_account_value'],
+                'invested'   => $summary['total_invested'],
+                'unrealised' => $summary['total_unrealised_pnl'],
+                'realised'   => $summary['total_realised_pnl']
+            ]);
         } else {
             $sql = "INSERT INTO portfolio_snapshots
                     (snapshot_date, available_cash, portfolio_value, total_equity, total_invested, unrealised_pnl, realised_pnl, created_at)
@@ -1024,18 +1110,17 @@ function record_daily_portfolio_snapshot(): void {
                         total_invested = EXCLUDED.total_invested,
                         unrealised_pnl = EXCLUDED.unrealised_pnl,
                         realised_pnl = EXCLUDED.realised_pnl";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                'sdate'      => $today,
+                'cash'       => $summary['available_cash'],
+                'pval'       => $summary['portfolio_value'],
+                'equity'     => $summary['total_account_value'],
+                'invested'   => $summary['total_invested'],
+                'unrealised' => $summary['total_unrealised_pnl'],
+                'realised'   => $summary['total_realised_pnl']
+            ]);
         }
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            'sdate'      => $today,
-            'cash'       => $summary['available_cash'],
-            'pval'       => $summary['portfolio_value'],
-            'equity'     => $summary['total_account_value'],
-            'invested'   => $summary['total_invested'],
-            'unrealised' => $summary['total_unrealised_pnl'],
-            'realised'   => $summary['total_realised_pnl']
-        ]);
     } catch (Throwable $e) {
         error_log('[Record Snapshot Error] ' . $e->getMessage());
     }

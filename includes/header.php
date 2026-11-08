@@ -8,6 +8,22 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
 
+// Protect dashboard pages from unauthenticated access
+if (function_exists('auth_require_login')) {
+    auth_require_login();
+}
+
+$currentUser = function_exists('auth_current_user') ? auth_current_user() : null;
+if (!$currentUser) {
+    $currentUser = ['full_name' => 'Paper Trader', 'email' => 'trader@stockplus.local'];
+}
+
+$userInitials = 'TR';
+if (!empty($currentUser['full_name'])) {
+    $parts = explode(' ', trim($currentUser['full_name']));
+    $userInitials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+}
+
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
 $monitorStatus = get_monitor_status();
 
@@ -133,12 +149,17 @@ $sidebarCurr = ($sidebarSummary['currency'] ?? 'INR') === 'USD' ? '$' : '₹';
 
             <!-- Sidebar Footer Info -->
             <div class="sidebar-footer">
-                <div class="user-profile-badge">
-                    <div class="user-avatar">TR</div>
-                    <div class="user-info">
-                        <span class="user-name">Paper Trader</span>
-                        <span class="user-status">Virtual Mode</span>
+                <div class="user-profile-badge" style="justify-content: space-between; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                        <div class="user-avatar"><?= htmlspecialchars($userInitials) ?></div>
+                        <div class="user-info" style="overflow: hidden;">
+                            <span class="user-name" style="white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="<?= htmlspecialchars($currentUser['full_name']) ?>"><?= htmlspecialchars($currentUser['full_name']) ?></span>
+                            <span class="user-status">Virtual Mode</span>
+                        </div>
                     </div>
+                    <a href="logout.php" class="btn btn-sm btn-outline-danger" title="Sign out of StockPlus" style="padding: 4px 8px; font-size: 0.75rem; text-decoration: none;">
+                        Logout
+                    </a>
                 </div>
             </div>
         </aside>
