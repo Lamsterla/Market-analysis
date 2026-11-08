@@ -96,17 +96,30 @@ function check_login_rate_limit(string $ip, ?string $email = null): array {
     $pdo = get_db_connection();
     $cutoff = gmdate('Y-m-d H:i:s', time() - 900); // 15 minutes ago in UTC
 
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM login_attempts 
-        WHERE (ip_address = :ip OR (:email != '' AND email = :email))
-          AND attempt_time > :cutoff
-    ");
-    $stmt->execute([
-        'ip'     => $ip,
-        'email'  => $email ?: '',
-        'cutoff' => $cutoff
-    ]);
+    if (!empty($email)) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM login_attempts 
+            WHERE (ip_address = :ip OR email = :email)
+              AND attempt_time > :cutoff
+        ");
+        $stmt->execute([
+            'ip'     => $ip,
+            'email'  => $email,
+            'cutoff' => $cutoff
+        ]);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM login_attempts 
+            WHERE ip_address = :ip
+              AND attempt_time > :cutoff
+        ");
+        $stmt->execute([
+            'ip'     => $ip,
+            'cutoff' => $cutoff
+        ]);
+    }
     $count = (int)$stmt->fetchColumn();
 
     if ($count >= 5) {
@@ -128,7 +141,7 @@ function record_login_attempt(string $ip, ?string $email = null): void {
     $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, email, attempt_time) VALUES (:ip, :email, :t)");
     $stmt->execute([
         'ip'    => $ip,
-        'email' => $email ?: null,
+        'email' => !empty($email) ? $email : null,
         't'     => gmdate('Y-m-d H:i:s')
     ]);
 }
@@ -138,11 +151,18 @@ function record_login_attempt(string $ip, ?string $email = null): void {
  */
 function clear_login_attempts(string $ip, ?string $email = null): void {
     $pdo = get_db_connection();
-    $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = :ip OR (:email IS NOT NULL AND email = :email)");
-    $stmt->execute([
-        'ip'    => $ip,
-        'email' => $email ?: ''
-    ]);
+    if (!empty($email)) {
+        $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = :ip OR email = :email");
+        $stmt->execute([
+            'ip'    => $ip,
+            'email' => $email
+        ]);
+    } else {
+        $stmt = $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = :ip");
+        $stmt->execute([
+            'ip' => $ip
+        ]);
+    }
 }
 
 /**
