@@ -13,6 +13,13 @@ database/*.sqlite
 database/*.sqlite3
 database/*.db
 database/*.bak
+database/auth_schema.sql
+database/init_db.php
+database/schema.sql
+auth_schema.sql
+init_db.php
+schema.sql
+
 
 
 # Python artifacts
