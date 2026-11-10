@@ -67,7 +67,7 @@ function initPasswordStrength() {
         if (/[0-9]/.test(val)) score++;
         if (/[\W_]/.test(val)) score++;
 
-        const colors = ['#EF4444', '#F97316', '#FBBF24', '#34D399', '#10B981'];
+        const colors = ['#FF7171', '#FA5757', '#FCD34D', '#86D7CA', '#0D8259'];
         const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
 
         const activeCount = Math.min(score, 4);

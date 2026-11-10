@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span>⚠️ <?= htmlspecialchars($errorMessage) ?></span>
                         <?php if ($unverifiedEmail): ?>
                             <div style="margin-top: 8px;">
-                                <a href="verify_email.php?email=<?= urlencode($unverifiedEmail) ?>" class="auth-link" style="color: #93C5FD; font-size: 0.85rem;">
+                                <a href="verify_email.php?email=<?= urlencode($unverifiedEmail) ?>" class="auth-link" style="font-size: 0.85rem;">
                                     Click here to enter your 6-digit OTP code &rarr;
                                 </a>
                             </div>

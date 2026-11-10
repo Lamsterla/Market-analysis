@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div style="font-size: 2.8rem; margin-bottom: 8px;">📬</div>
                     <h1 class="auth-title">Verify Your Email</h1>
                     <p class="auth-subtitle">We have sent a confirmation email to:</p>
-                    <p style="color: #60A5FA; font-weight: 700; font-family: var(--font-mono); margin-top: 6px;">
+                    <p class="auth-highlight-email" style="margin-top: 6px;">
                         <?= htmlspecialchars($successInfo['email']) ?>
                     </p>
                 </div>
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <strong>What's Next?</strong><br>
                         Click the verification link in your email to activate your account and claim your <strong>₹100,000</strong> virtual trading account.
                         <?php if (!empty($successInfo['mailMsg']) && str_contains($successInfo['mailMsg'], 'not configured')): ?>
-                            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.8rem; color: #FDE68A;">
+                            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--color-profit-border); font-size: 0.8rem; color: var(--color-profit);">
                                 <em>Development Note:</em> Gmail SMTP credentials not yet provided in <code>.env</code>. You can manually verify via database or configure SMTP keys.
                             </div>
                         <?php endif; ?>

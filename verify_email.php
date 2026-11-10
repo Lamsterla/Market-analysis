@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p class="auth-subtitle">
                         <?php if (!empty($email)): ?>
                             We have sent a 6-digit OTP code to<br>
-                            <span style="color: #60A5FA; font-weight: 700; font-family: var(--font-mono); font-size: 0.95rem;">
+                            <span class="auth-highlight-email">
                                 <?= htmlspecialchars($email) ?>
                             </span>
                         <?php else: ?>
